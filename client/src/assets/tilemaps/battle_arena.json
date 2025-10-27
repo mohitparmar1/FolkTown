@@ -1,0 +1,125 @@
+{
+  "compressionlevel": 0,
+  "height": 50,
+  "infinite": false,
+  "layers": [
+    {
+      "data": [],
+      "height": 50,
+      "id": 1,
+      "name": "Below Player",
+      "opacity": 1,
+      "type": "tilelayer",
+      "visible": true,
+      "width": 60,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "data": [],
+      "height": 50,
+      "id": 2,
+      "name": "World",
+      "opacity": 1,
+      "type": "tilelayer",
+      "visible": true,
+      "width": 60,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "data": [],
+      "height": 50,
+      "id": 3,
+      "name": "Grass",
+      "opacity": 1,
+      "type": "tilelayer",
+      "visible": true,
+      "width": 60,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "data": [],
+      "height": 50,
+      "id": 4,
+      "name": "Above Player",
+      "opacity": 1,
+      "type": "tilelayer",
+      "visible": true,
+      "width": 60,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "draworder": "topdown",
+      "id": 5,
+      "name": "SpawnPoints",
+      "objects": [
+        {
+          "height": 32,
+          "id": 1,
+          "name": "Spawn Point",
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 32,
+          "x": 960,
+          "y": 800
+        }
+      ],
+      "opacity": 1,
+      "type": "objectgroup",
+      "visible": true,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "draworder": "topdown",
+      "id": 6,
+      "name": "Worlds",
+      "objects": [],
+      "opacity": 1,
+      "type": "objectgroup",
+      "visible": true,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "draworder": "topdown",
+      "id": 7,
+      "name": "Doors",
+      "objects": [],
+      "opacity": 1,
+      "type": "objectgroup",
+      "visible": true,
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "nextlayerid": 8,
+  "nextobjectid": 2,
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "tiledversion": "1.3.5",
+  "tileheight": 32,
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "image": "../tilesets/tuxmon-sample-32px-extruded.png",
+      "imageheight": 832,
+      "imagewidth": 992,
+      "margin": 1,
+      "name": "tuxmon-sample-32px-extruded",
+      "spacing": 2,
+      "tilecount": 672,
+      "tileheight": 32,
+      "tilewidth": 32
+    }
+  ],
+  "tilewidth": 32,
+  "type": "map",
+  "version": "1.8",
+  "width": 60
+}
+
