@@ -1,32 +1,53 @@
 import * as Colyseus from "colyseus.js";
 
 /*================================================
-| Object with current online players keyed by sessionId
+| Store of current online players keyed by sessionId
 */
 let onlinePlayers = {};
 
 /*================================================
-| Colyseus connection with server
+| Colyseus connection with backend server
 */
-var client = new Colyseus.Client("ws://localhost:3000");
+const client = new Colyseus.Client("ws://localhost:3000");
 
-// Start with a safe placeholder Promise so other modules can call room.then(...)
+// Safe placeholder room promise
 let room = Promise.resolve({
   send: () => {},
   sessionId: null,
   onMessage: () => {},
 });
 
+/*================================================
+| Function to join or create a room
+*/
 async function joinRoom(wallet) {
-  // wallet: string (publicKey) or null
   try {
-    room = client.joinOrCreate("folk_town", { wallet });
-    const r = await room;
-    console.log(r.sessionId, "joined", r.name);
-    return r;
+    // Try joining an existing folk_town room or create a new one if full
+    room = client
+      .joinOrCreate("folk_town", { wallet })
+      .then((r) => {
+        console.log(
+          `[Colyseus] ✅ Joined room: ${r.roomId} (${r.name}) | session: ${r.sessionId}`
+        );
+
+        r.onMessage("playerJoined", (msg) => {
+          console.log("📢 New player joined:", msg);
+        });
+
+        r.onLeave((code) => {
+          console.log(`[Colyseus] ❌ Left room (${r.roomId}), code: ${code}`);
+        });
+
+        return r;
+      })
+      .catch((e) => {
+        console.error("[Colyseus] ❗ Join error:", e.message);
+        throw e;
+      });
+
+    return room;
   } catch (e) {
-    console.log("JOIN ERROR", e && e.message ? e.message : e);
-    // keep room as a safe placeholder
+    console.log("JOIN ERROR", e?.message || e);
     room = Promise.resolve({
       send: () => {},
       sessionId: null,
