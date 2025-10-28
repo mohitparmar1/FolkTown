@@ -3,48 +3,61 @@ const colyseus = require("colyseus");
 exports.FolkTown = class extends colyseus.Room {
   onCreate(options) {
     console.log("ON CREATE");
-    // Use per-room players map instead of module-global
+
+    // ✅ Define per-room player list
     this.players = {};
 
+    // ✅ Handle player movement
     this.onMessage("PLAYER_MOVED", (player, data) => {
       console.log("PLAYER_MOVED", data);
 
-      players[player.sessionId].x = data.x;
-      players[player.sessionId].y = data.y;
+      const p = this.players[player.sessionId];
+      if (!p) return; // safeguard
+
+      p.x = data.x;
+      p.y = data.y;
 
       this.broadcast(
         "PLAYER_MOVED",
         {
-          ...players[player.sessionId],
+          ...p,
           position: data.position,
         },
         { except: player }
       );
     });
 
+    // ✅ Handle movement ended
     this.onMessage("PLAYER_MOVEMENT_ENDED", (player, data) => {
+      const p = this.players[player.sessionId];
+      if (!p) return;
+
       this.broadcast(
         "PLAYER_MOVEMENT_ENDED",
         {
           sessionId: player.sessionId,
-          map: players[player.sessionId].map,
+          map: p.map,
           position: data.position,
         },
         { except: player }
       );
     });
 
+    // ✅ Handle map change
     this.onMessage("PLAYER_CHANGED_MAP", (player, data) => {
-      if (!this.players[player.sessionId]) return;
-      this.players[player.sessionId].map = data.map;
+      const p = this.players[player.sessionId];
+      if (!p) return;
 
+      p.map = data.map;
+
+      // Send all current players to the one who changed map
       player.send("CURRENT_PLAYERS", { players: this.players });
 
       this.broadcast(
         "PLAYER_CHANGED_MAP",
         {
           sessionId: player.sessionId,
-          map: this.players[player.sessionId].map,
+          map: p.map,
           x: 300,
           y: 75,
           players: this.players,
@@ -55,12 +68,12 @@ exports.FolkTown = class extends colyseus.Room {
   }
 
   requestJoin(options, isNew) {
-    // Ensure wallet uniqueness per room (if provided)
+    // ✅ Prevent duplicate wallets joining same room
     if (options && options.wallet) {
       const duplicate = Object.values(this.players || {}).some(
         (p) => p.wallet && p.wallet === options.wallet
       );
-      if (duplicate) return false; // reject join
+      if (duplicate) return false;
     }
     return true;
   }
@@ -73,13 +86,16 @@ exports.FolkTown = class extends colyseus.Room {
       map: "town",
       x: 352,
       y: 1216,
-      wallet: options && options.wallet ? options.wallet : null,
+      wallet: options?.wallet || null,
     };
 
+    // Send current players after a short delay
     setTimeout(
       () => player.send("CURRENT_PLAYERS", { players: this.players }),
       500
     );
+
+    // Notify others that a player joined
     this.broadcast(
       "PLAYER_JOINED",
       { ...this.players[player.sessionId] },
@@ -90,10 +106,11 @@ exports.FolkTown = class extends colyseus.Room {
   onLeave(player, consented) {
     console.log("ON LEAVE");
 
-    if (this.players[player.sessionId]) {
+    const p = this.players[player.sessionId];
+    if (p) {
       this.broadcast("PLAYER_LEFT", {
         sessionId: player.sessionId,
-        map: this.players[player.sessionId].map,
+        map: p.map,
       });
       delete this.players[player.sessionId];
     }
