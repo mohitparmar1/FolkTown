@@ -1,28 +1,39 @@
 import * as Colyseus from "colyseus.js";
 
 /*================================================
-| Array with current online players
+| Object with current online players keyed by sessionId
 */
-let onlinePlayers = [];
+let onlinePlayers = {};
 
 /*================================================
 | Colyseus connection with server
 */
 var client = new Colyseus.Client("ws://localhost:3000");
-let room = client
-  .joinOrCreate("poke_world")
-  .then((room) => {
-    console.log(room.sessionId, "joined", room.name);
-    return room;
-  })
-  .catch((e) => {
-    console.log("JOIN ERROR", e);
-    // Return a mock room object to prevent undefined errors
-    return {
+
+// Start with a safe placeholder Promise so other modules can call room.then(...)
+let room = Promise.resolve({
+  send: () => {},
+  sessionId: null,
+  onMessage: () => {},
+});
+
+async function joinRoom(wallet) {
+  // wallet: string (publicKey) or null
+  try {
+    room = client.joinOrCreate("folk_town", { wallet });
+    const r = await room;
+    console.log(r.sessionId, "joined", r.name);
+    return r;
+  } catch (e) {
+    console.log("JOIN ERROR", e && e.message ? e.message : e);
+    // keep room as a safe placeholder
+    room = Promise.resolve({
       send: () => {},
       sessionId: null,
       onMessage: () => {},
-    };
-  });
+    });
+    throw e;
+  }
+}
 
-export { onlinePlayers, room };
+export { onlinePlayers, room, joinRoom };

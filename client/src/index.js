@@ -39,7 +39,7 @@ export default new Phaser.Game(Config);
 
 // Wire minimal DOM wallet UI (index.html provides the elements)
 if (typeof window !== "undefined") {
-  window.addEventListener("DOMContentLoaded", () => {
+  window.addEventListener("DOMContentLoaded", async () => {
     const btn = document.getElementById("connect-wallet");
     const addr = document.getElementById("wallet-address");
 
@@ -60,7 +60,21 @@ if (typeof window !== "undefined") {
 
     if (!btn || !addr) return;
 
-    // initial state
+    // Force disconnect on each page/game entry so player is asked to connect every time
+    // (Phantom may remember a session; disconnecting ensures an explicit user action is required)
+    try {
+      await disconnectWallet();
+    } catch (e) {
+      // ignore errors during forced disconnect
+    }
+
+    // Clear any previous session flag so the player must explicitly connect this session
+    try {
+      if (window.sessionStorage)
+        window.sessionStorage.removeItem("ft_connected_this_session");
+    } catch (e) {}
+
+    // initial state - show as not connected so user must click to connect
     updateUi(null);
 
     btn.addEventListener("click", async () => {
@@ -71,17 +85,40 @@ if (typeof window !== "undefined") {
 
       if (btn.textContent === "Disconnect") {
         await disconnectWallet();
+        // clear session flag on manual disconnect
+        try {
+          if (window.sessionStorage)
+            window.sessionStorage.removeItem("ft_connected_this_session");
+        } catch (e) {}
         updateUi(null);
         return;
       }
 
       try {
         const address = await connectWallet();
+        // mark that the user explicitly connected this page session
+        try {
+          if (window.sessionStorage)
+            window.sessionStorage.setItem("ft_connected_this_session", "true");
+        } catch (e) {}
         updateUi(address);
       } catch (err) {
         console.error("Wallet connect failed", err);
       }
     });
-    onWalletChange((address) => updateUi(address));
+    onWalletChange((address) => {
+      updateUi(address);
+      try {
+        if (!address && window.sessionStorage) {
+          window.sessionStorage.removeItem("ft_connected_this_session");
+        }
+      } catch (e) {}
+      // If the wallet was connected via extension/UI outside the page button, still mark session as connected
+      try {
+        if (address && window.sessionStorage) {
+          window.sessionStorage.setItem("ft_connected_this_session", "true");
+        }
+      } catch (e) {}
+    });
   });
 }

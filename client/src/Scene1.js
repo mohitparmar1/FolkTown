@@ -9,7 +9,13 @@ import PlayersAtlasJSON from "./assets/atlas/players";
 import PlayersAtlasPNG from "./assets/images/players/players.png";
 
 import AudioManager from "./AudioManager";
-import { isWalletConnected } from "./wallet";
+import {
+  isWalletConnected,
+  connectWallet,
+  isPhantomInstalled,
+  getCurrentWalletAddress,
+} from "./wallet";
+import { joinRoom } from "./SocketServer";
 
 export class Scene1 extends Phaser.Scene {
   constructor() {
@@ -136,12 +142,29 @@ export class Scene1 extends Phaser.Scene {
     this.checkWalletAndStart();
   }
 
-  checkWalletAndStart() {
-    if (isWalletConnected()) {
+  async checkWalletAndStart() {
+    // Require both a connected wallet and that the player explicitly connected during this page session.
+    const sessionFlag =
+      typeof window !== "undefined" &&
+      window.sessionStorage &&
+      window.sessionStorage.getItem("ft_connected_this_session") === "true";
+
+    if (isWalletConnected() && sessionFlag) {
       // Wallet is connected, start the game
       if (this.walletCheckTimer) {
         this.time.removeEvent(this.walletCheckTimer);
       }
+      // ensure we join the colyseus room with the wallet before starting
+      try {
+        const addr = getCurrentWalletAddress();
+        await joinRoom(addr);
+      } catch (e) {
+        console.error("Failed to join room:", e);
+        // show a short message (could be improved)
+        this.showMessage("Failed to join game room. Try reconnecting.", 3000);
+        return;
+      }
+
       this.scene.start("playGame", {
         map: "route1",
         playerTexturePosition: "front",
@@ -225,7 +248,60 @@ export class Scene1 extends Phaser.Scene {
       repeat: -1,
     });
 
-    // Check wallet status periodically
+    // Connect button (in-scene) so user must explicitly connect to proceed
+    const connectLabel = isPhantomInstalled()
+      ? "Connect Phantom"
+      : "Install Phantom";
+    const connectBtn = this.add
+      .text(width / 2, height / 2 + 180, connectLabel, {
+        font: "22px monospace",
+        fill: "#ffffff",
+        backgroundColor: "#0066ff",
+        padding: { x: 16, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(60)
+      .setInteractive({ useHandCursor: true });
+
+    connectBtn.on("pointerdown", async () => {
+      if (!isPhantomInstalled()) {
+        window.open("https://phantom.app/", "_blank");
+        return;
+      }
+
+      try {
+        const address = await connectWallet();
+        try {
+          if (window.sessionStorage)
+            window.sessionStorage.setItem("ft_connected_this_session", "true");
+        } catch (e) {}
+        // Try to join the Colyseus room with the connected wallet address
+        try {
+          await joinRoom(address);
+        } catch (e) {
+          console.error("Join room failed:", e);
+          this.showMessage(
+            "Unable to join map (full or duplicate wallet).",
+            4000
+          );
+          return;
+        }
+
+        // Clean up any wallet check timer and start the game
+        if (this.walletCheckTimer) {
+          this.time.removeEvent(this.walletCheckTimer);
+        }
+        this.scene.start("playGame", {
+          map: "route1",
+          playerTexturePosition: "front",
+        });
+      } catch (e) {
+        console.error("Connect failed", e);
+      }
+    });
+
+    // Check wallet status periodically (in case user connects using extension UI)
     this.walletCheckTimer = this.time.addEvent({
       delay: 500,
       callback: this.checkWalletAndStart,

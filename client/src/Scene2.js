@@ -471,18 +471,41 @@ export class Scene2 extends Phaser.Scene {
   }
 
   debugGraphics() {
-    // Debug graphics
-    this.input.keyboard.once("keydown_D", (event) => {
-      // Turn on physics debugging to show player's hitbox
-      this.physics.world.createDebugGraphic();
+    // Toggleable debug graphics using D key. Use addKey for reliable handling.
+    this.debugGraphicsEnabled = false;
+    this._debugGraphicsObj = null;
 
-      // Create worldLayer collision graphic above the player, but below the help text
-      const graphics = this.add.graphics().setAlpha(0.75).setDepth(20);
-      this.worldLayer.renderDebug(graphics, {
-        tileColor: null, // Color of non-colliding tiles
-        collidingTileColor: new Phaser.Display.Color(243, 134, 48, 255), // Color of colliding tiles
-        faceColor: new Phaser.Display.Color(40, 39, 37, 255), // Color of colliding face edges
-      });
+    const keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+    keyD.on("down", () => {
+      if (!this.debugGraphicsEnabled) {
+        this.debugGraphicsEnabled = true;
+        // Turn on physics debugging to show player's hitbox
+        try {
+          this.physics.world.createDebugGraphic();
+        } catch (e) {
+          console.warn("Unable to create physics debug graphic", e);
+        }
+
+        // Create worldLayer collision graphic above the player, but below the help text
+        this._debugGraphicsObj = this.add
+          .graphics()
+          .setAlpha(0.75)
+          .setDepth(20);
+        this.worldLayer.renderDebug(this._debugGraphicsObj, {
+          tileColor: null, // Color of non-colliding tiles
+          collidingTileColor: new Phaser.Display.Color(243, 134, 48, 255), // Color of colliding tiles
+          faceColor: new Phaser.Display.Color(40, 39, 37, 255), // Color of colliding face edges
+        });
+      } else {
+        // Toggle off
+        this.debugGraphicsEnabled = false;
+        try {
+          if (this._debugGraphicsObj) {
+            this._debugGraphicsObj.destroy();
+            this._debugGraphicsObj = null;
+          }
+        } catch (e) {}
+      }
     });
   }
 
